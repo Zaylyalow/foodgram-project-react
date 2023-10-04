@@ -10,7 +10,7 @@
 [![.github/workflows/main.yml](https://github.com/zaylyalow/foodgram-project-react/actions/workflows/main.yml/badge.svg)](https://github.com/zaylyalow/foodgram-project-react/actions/workflows/main.yml)
 
 
-# foodgram
+# Foodgram
 
 Сайт для обмена рецептами. 
 
