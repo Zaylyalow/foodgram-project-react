@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 
-DEBUG = os.getenv('DEBUG', 'false').lower() in ('true', '1',)
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -95,10 +95,10 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://foodgramishe.duckdns.org',
-    'https://www.foodgramishe.duckdns.org'
-]
+# CSRF_TRUSTED_ORIGINS = [
+#     'https://foodgramishe.duckdns.org',
+#     'https://www.foodgramishe.duckdns.org'
+# ]
 
 
 LANGUAGE_CODE = 'en-us'
