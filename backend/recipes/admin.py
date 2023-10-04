@@ -1,146 +1,61 @@
 from django.contrib import admin
 
-from backend.settings import LIST_PER_PAGE
-
-from .models import (
-    Favorite,
-    Ingredient,
-    IngredientAmount,
-    Recipe,
-    ShoppingCart,
-    Tag
-)
+from .models import (Tag, Recipe, ShoppingList,
+                     Favorite, RecipeIngredient, RecipeTag)
 
 
-@admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
-    """Класс настройки раздела тегов."""
-
-    list_display = (
-        'pk',
-        'name',
-        'color',
-        'slug'
-    )
-    empty_value_display = 'значение отсутствует'
-    list_filter = ('name',)
-    list_per_page = LIST_PER_PAGE
-    search_fields = ('name',)
-    prepopulated_fields = {'slug': ('name',)}
-
-
-@admin.register(Ingredient)
-class IngredientAdmin(admin.ModelAdmin):
-    """Класс настройки раздела ингредиентов."""
-
-    list_display = (
-        'pk',
-        'name',
-        'measurement_unit'
-    )
-    empty_value_display = 'значение отсутствует'
-    list_filter = ('name',)
-    list_per_page = LIST_PER_PAGE
-    search_fields = ('name',)
-
-
-class IngredientAmountInline(admin.TabularInline):
-    """Класс, позволяющий добавлять ингредиенты в рецепты."""
-
-    model = IngredientAmount
+class RecipeIngredientInline(admin.TabularInline):
+    model = RecipeIngredient
     min_num = 1
 
 
-@admin.register(Recipe)
+class RecipeTagInline(admin.TabularInline):
+    model = RecipeTag
+    min_num = 1
+
+
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'color', 'slug',)
+    empty_value_display = '-пусто-'
+
+
 class RecipeAdmin(admin.ModelAdmin):
-    """Класс настройки раздела рецептов."""
+    list_display = ('id', 'author', 'name',
+                    'image', 'cooking_time', 'ings')
+    empty_value_display = '-пусто-'
+    inlines = (RecipeIngredientInline, RecipeTagInline,)
 
-    list_display = (
-        'pk',
-        'name',
-        'author',
-        'text',
-        'get_tags',
-        'get_ingredients',
-        'cooking_time',
-        'image',
-        'pub_date',
-        'count_favorite',
-    )
-    inlines = [
-        IngredientAmountInline,
-    ]
-
-    empty_value_display = 'значение отсутствует'
-    list_editable = ('author',)
-    list_filter = ('author', 'name', 'tags')
-    list_per_page = LIST_PER_PAGE
-    search_fields = ('author', 'name')
-
-    def get_ingredients(self, object):
-        """Получает ингредиент или список ингредиентов рецепта."""
-        return '\n'.join(
-            (ingredient.name for ingredient in object.ingredients.all())
-        )
-
-    get_ingredients.short_description = 'ингредиенты'
-
-    def get_tags(self, object):
-        """Получает тег или список тегов рецепта."""
-        return '\n'.join((tag.name for tag in object.tags.all()))
-
-    get_tags.short_description = 'теги'
-
-    def count_favorite(self, object):
-        """Вычисляет количество добавлений рецепта в избранное."""
-        return object.favoriting.count()
-
-    count_favorite.short_description = 'Количество добавлений в избранное'
+    @admin.display(description="Ингредиенты")
+    def ings(self, obj):
+        txt = ''
+        for item in obj.ingredients.all():
+            txt += f'{item.name}, '
+        return txt[:-2]
 
 
-@admin.register(IngredientAmount)
-class IngredientAmountAdmin(admin.ModelAdmin):
-    """Класс настройки соответствия игредиентов и рецептов."""
-
-    list_display = (
-        'pk',
-        'ingredient',
-        'amount',
-        'recipe'
-    )
-    empty_value_display = 'значение отсутствует'
-    list_per_page = LIST_PER_PAGE
+class RecipeIngredientAdmin(admin.ModelAdmin):
+    list_display = ('id', 'recipe', 'ingredient',)
+    search_fields = ('recipe__name',)
 
 
-@admin.register(Favorite)
+class RecipeTagAdmin(admin.ModelAdmin):
+    list_display = ('id', 'recipe', 'tag',)
+    search_fields = ('recipe__name',)
+
+
+class ShoppingListAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'recipe',)
+    search_fields = ('user__username',)
+
+
 class FavoriteAdmin(admin.ModelAdmin):
-    """Класс настройки раздела избранного."""
-
-    list_display = (
-        'pk',
-        'user',
-        'recipe',
-    )
-
-    empty_value_display = 'значение отсутствует'
-    list_editable = ('user', 'recipe')
-    list_filter = ('user',)
-    search_fields = ('user',)
-    list_per_page = LIST_PER_PAGE
+    list_display = ('id', 'user', 'recipe',)
+    search_fields = ('user__username',)
 
 
-@admin.register(ShoppingCart)
-class ShoppingCartAdmin(admin.ModelAdmin):
-    """Класс настройки раздела рецептов, которые добавлены в список покупок."""
-
-    list_display = (
-        'pk',
-        'user',
-        'recipe',
-    )
-
-    empty_value_display = 'значение отсутствует'
-    list_editable = ('user', 'recipe')
-    list_filter = ('user',)
-    search_fields = ('user',)
-    list_per_page = LIST_PER_PAGE
+admin.site.register(ShoppingList, ShoppingListAdmin)
+admin.site.register(Favorite, FavoriteAdmin)
+admin.site.register(RecipeIngredient, RecipeIngredientAdmin)
+admin.site.register(RecipeTag, RecipeTagAdmin)
+admin.site.register(Tag, TagAdmin)
+admin.site.register(Recipe, RecipeAdmin)

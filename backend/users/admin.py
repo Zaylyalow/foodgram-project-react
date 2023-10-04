@@ -1,45 +1,30 @@
 from django.contrib import admin
 
-from backend.settings import LIST_PER_PAGE
-
-from .models import Subscription, User
+from .models import User, Subscription
 
 
-@admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    """Класс настройки раздела пользователей."""
-
     list_display = (
-        'pk',
-        'username',
-        'email',
-        'first_name',
-        'last_name',
-        'password',
-        'is_admin'
-    )
-    empty_value_display = 'значение отсутствует'
-    list_editable = ('is_admin',)
-    list_filter = ('username', 'email')
-    list_per_page = LIST_PER_PAGE
-    search_fields = ('username',)
+        'id', 'username',
+        'email', 'first_name',
+        'last_name', 'subs_count',
+        'recipe_count')
+    search_fields = ('username', 'email',)
+    empty_value_display = '-пусто-'
+
+    @admin.display(description='Количество подписчиков')
+    def subs_count(self, obj):
+        return obj.followers.count()
+
+    @admin.display(description='Количество рецептов')
+    def recipe_count(self, obj):
+        return obj.recipes.count()
 
 
-@admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
-    """Класс настройки раздела подписок."""
-
-    list_display = (
-        'pk',
-        'author',
-        'subscriber',
-    )
-
-    list_editable = ('author', 'subscriber')
-    list_filter = ('author',)
-    list_per_page = LIST_PER_PAGE
+    list_display = ('follower', 'author',)
     search_fields = ('author',)
 
 
-admin.site.site_title = 'Администрирование Foodgram'
-admin.site.site_header = 'Администрирование Foodgram'
+admin.site.register(User, UserAdmin)
+admin.site.register(Subscription, SubscriptionAdmin)

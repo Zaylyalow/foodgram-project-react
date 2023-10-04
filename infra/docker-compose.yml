@@ -1,26 +1,30 @@
 version: '3.3'
-services:
 
+volumes:
+  pg_data:
+  static:
+  media:
+
+services:
   db:
-    image: postgres:13.0-alpine
+    image: postgres:13
+    env_file: ./.env
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    env_file:
-      - ./.env
+      - pg_data:/var/lib/postgresql/data
 
   backend:
-    image: zaylyalow/foodgram_backend:latest
-    restart: always
+    build: ../backend/
+    env_file: ./.env
     volumes:
-      - static:/app/static/
-      - media:/app/media/
+      - static:/backend_static
+      - media:/app/media
     depends_on:
       - db
-    env_file:
-      - ./.env
 
   frontend:
-    image: zaylyalow/foodgram_frontend:latest
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
     volumes:
       - ../frontend/:/app/result_build/
 
@@ -32,14 +36,7 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - ../frontend/build:/usr/share/nginx/html/
       - ../docs/:/usr/share/nginx/html/api/docs/
-      - static:/var/html/static
-      - media:/var/html/media
-    restart: always
+      - static:/var/html/static/
+      - media:/var/html/media/
     depends_on:
-      - backend
       - frontend
-
-volumes:
-  postgres_data:
-  static:
-  media:
