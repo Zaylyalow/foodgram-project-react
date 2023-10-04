@@ -67,8 +67,8 @@ DATABASES = {
         'NAME': os.getenv('POSTGRES_DB', 'django'),
         'USER': os.getenv('POSTGRES_USER', 'django'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', ''),
-        'PORT': os.getenv('DB_PORT', 5432)
+        'HOST': os.getenv('POSTGRES_HOST', ''),
+        'PORT': os.getenv('POSTGRES_PORT', 5432)
     }
 }
 
@@ -95,10 +95,10 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# CSRF_TRUSTED_ORIGINS = [
-#     'https://foodgramishe.duckdns.org',
-#     'https://www.foodgramishe.duckdns.org'
-# ]
+CSRF_TRUSTED_ORIGINS = [
+    'https://foodgramishe.duckdns.org',
+    'https://www.foodgramishe.duckdns.org'
+]
 
 
 LANGUAGE_CODE = 'en-us'
