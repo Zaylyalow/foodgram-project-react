@@ -105,9 +105,11 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         for tag in tags:
             if len(tag) != len(set(tag)):
-                raise serializers.ValidationError('Теги должны быть уникальными!')
+                raise serializers.ValidationError(
+                    'Теги должны быть уникальными!')
             if not Tag.objects.filter(id=tag).exists():
-                raise serializers.ValidationError('Без тзгов нельзя!')
+                raise serializers.ValidationError(
+                    'Без тзгов нельзя!')
             checklist.append(tag)
 
         return data
