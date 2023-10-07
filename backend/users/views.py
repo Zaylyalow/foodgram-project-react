@@ -1,19 +1,17 @@
-from rest_framework import status, viewsets, permissions, mixins
+from djoser.views import UserViewSet
+from rest_framework import status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from djoser import serializers
 
-from .serializers import UserSerializer
+from .serializers import CustomUserSerializer
 from .models import User
 
 
-class UserViewSet(viewsets.GenericViewSet,
-                  mixins.CreateModelMixin,
-                  mixins.ListModelMixin,
-                  mixins.RetrieveModelMixin):
+class CustomUserViewSet(UserViewSet):
     """View Set for all user endpoints."""
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = CustomUserSerializer
     permission_classes = (permissions.AllowAny,)
     lookup_field = 'id'
 
