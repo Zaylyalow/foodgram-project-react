@@ -14,11 +14,13 @@ class RecipeTagInline(admin.TabularInline):
     min_num = 1
 
 
+@admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'color', 'slug',)
     empty_value_display = '-пусто-'
 
 
+@admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ('id', 'author', 'name',
                     'image', 'cooking_time', 'ings')
@@ -33,29 +35,26 @@ class RecipeAdmin(admin.ModelAdmin):
         return txt[:-2]
 
 
+@admin.register(RecipeIngredient)
 class RecipeIngredientAdmin(admin.ModelAdmin):
     list_display = ('id', 'recipe', 'ingredient',)
     search_fields = ('recipe__name',)
 
 
+@admin.register(RecipeTag)
 class RecipeTagAdmin(admin.ModelAdmin):
     list_display = ('id', 'recipe', 'tag',)
     search_fields = ('recipe__name',)
 
 
+@admin.register(ShoppingList)
 class ShoppingListAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'recipe',)
     search_fields = ('user__username',)
 
 
+@admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'recipe',)
     search_fields = ('user__username',)
 
-
-admin.site.register(ShoppingList, ShoppingListAdmin)
-admin.site.register(Favorite, FavoriteAdmin)
-admin.site.register(RecipeIngredient, RecipeIngredientAdmin)
-admin.site.register(RecipeTag, RecipeTagAdmin)
-admin.site.register(Tag, TagAdmin)
-admin.site.register(Recipe, RecipeAdmin)
