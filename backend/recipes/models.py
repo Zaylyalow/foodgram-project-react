@@ -7,7 +7,7 @@ from colorfield.fields import ColorField
 from ingredients.models import Ingredient
 from foodgram_backend import constants
 
-User = get_user_model()
+from users.models import User
 
 
 class Tag(models.Model):

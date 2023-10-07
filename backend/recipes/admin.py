@@ -57,4 +57,3 @@ class ShoppingListAdmin(admin.ModelAdmin):
 class FavoriteAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'recipe',)
     search_fields = ('user__username',)
-
