@@ -177,7 +177,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
     """Serializer for list Recipes model."""
     ingredients = RecipeIngredientListSerializer(
         required=True, many=True, source='r_ingredients')
-    author = UserSerializer(read_only=True)
+    author = CustomUserSerializer(read_only=True)
     tags = RecipeTagListSerializer(required=True, many=True, source='r_tags')
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
@@ -210,7 +210,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
         ).exists()
 
 
-class SubscribeSerializer(UserSerializer):
+class SubscribeSerializer(CustomUserSerializer):
     """Subscribe serializer."""
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
