@@ -5,7 +5,7 @@ from drf_extra_fields.fields import Base64ImageField
 from recipes.models import (Recipe, RecipeTag, RecipeIngredient,
                             Tag, Favorite, User, ShoppingList)
 from ingredients.models import Ingredient
-from users.serializers import UserSerializer
+from users.serializers import CustomUserSerializer
 from foodgram_backend import constants
 
 
@@ -62,7 +62,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     """Serializer for Recipes model."""
     image = Base64ImageField(required=False)
     ingredients = RecipeIngredientSerializer(required=True, many=True)
-    author = UserSerializer(read_only=True)
+    author = CustomUserSerializer(read_only=True)
     tags = serializers.ListField(required=True)
     cooking_time = serializers.IntegerField(
         min_value=constants.MIN_INT_VALIDATOR,
