@@ -84,16 +84,18 @@ class RecipeSerializer(serializers.ModelSerializer):
             instance, context={'request': self.context.get('request')}).data
 
     def validate(self, data):
+        max_letters = 2
         name = data.get('name')
-        l_count = sum(symbol.isalpha() for symbol in name)
-        if l_count < 2:
+        letter_count = sum(symbol.isalpha() for symbol in name)
+        if letter_count < max_letters:
             raise serializers.ValidationError(
                 'Название должно содержать минимум две буквы.')
 
         ingredients = data.get('ingredients')
         tags = data.get('tags')
         if not (ingredients and tags):
-            raise serializers.ValidationError()
+            raise serializers.ValidationError(
+                'Поле ingredients или tags пустое')
 
         checklist = []
         for ingredient in ingredients:
@@ -101,12 +103,11 @@ class RecipeSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError()
             checklist.append(ingredient.get('id'))
 
-        checklist = []
         for tag in tags:
-            if tag in checklist:
-                raise serializers.ValidationError()
+            if len(tag) != len(set(tag)):
+                raise serializers.ValidationError('Теги должны быть уникальными!')
             if not Tag.objects.filter(id=tag).exists():
-                raise serializers.ValidationError()
+                raise serializers.ValidationError('Без тзгов нельзя!')
             checklist.append(tag)
 
         return data
@@ -169,8 +170,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             )
         RecipeIngredient.objects.bulk_create(recipe_ingredients)
 
-        instance.save()
-        return instance
+        return super().update(instance, validated_data)
 
 
 class RecipeListSerializer(serializers.ModelSerializer):
@@ -229,9 +229,9 @@ class SubscribeSerializer(CustomUserSerializer):
         )
 
     def get_recipes(self, obj):
-        recipes_limit = self.context[
+        recipes_limit = int(self.context[
             'request'
-        ].query_params.get('recipes_limit', 'f')
+        ].query_params.get('recipes_limit', 'f'))
 
         if not recipes_limit.isdigit():
             recipes_limit = None
