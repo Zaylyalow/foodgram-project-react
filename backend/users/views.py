@@ -3,8 +3,8 @@ from rest_framework import permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .serializers import CustomUserSerializer
 from .models import User
+from .serializers import CustomUserSerializer
 
 
 class CustomUserViewSet(UserViewSet):

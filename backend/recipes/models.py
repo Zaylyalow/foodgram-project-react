@@ -1,11 +1,9 @@
-from django.db import models
-from django.core.validators import (RegexValidator, MinValueValidator,
-                                    MaxValueValidator)
 from colorfield.fields import ColorField
-
-from ingredients.models import Ingredient
+from django.core.validators import (MaxValueValidator, MinValueValidator,
+                                    RegexValidator)
+from django.db import models
 from foodgram_backend import constants
-
+from ingredients.models import Ingredient
 from users.models import User
 
 
@@ -196,3 +194,30 @@ class Favorite(RecipeUser):
         ordering = ('user__username',)
         verbose_name = 'Избранный рецепт'
         verbose_name_plural = 'Избранные рецепты'
+
+
+class Follow(models.Model):
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='author',
+        verbose_name='автор',
+    )
+    follower = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='follower',
+        verbose_name='подписчик',
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['author', 'follower'],
+                name='unique_follow',
+            ),
+        ]
+        ordering = ('id',)
+
+    def __str__(self) -> str:
+        return f'Пользователь {self.follower} подписан на {self.author}'
