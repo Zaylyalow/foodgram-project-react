@@ -1,21 +1,23 @@
-from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
-from rest_framework import status
-from rest_framework import viewsets, mixins, permissions, serializers
-from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from recipes.models import Follow, Recipe, ShoppingList, User
+from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
-
-from recipes.models import (RecipeIngredient, Favorite, Recipe,
-                            User, ShoppingList)
+from rest_framework.response import Response
 from users.models import Subscription
-from .serializers import (FavoriteRecipeSerializer, RecipeSerializer,
-                          RecipeListSerializer, SubscribeSerializer)
-from .permissions import IsAuthorOrReadOnly
+
+from .filters import RecipeFilter
 from .paginators import RecipePagination
+from .permissions import IsAuthorOrReadOnly
+from .serializers import (FavoriteRecipeSerializer, RecipeListSerializer,
+                          RecipeSerializer, SubscribeSerializer)
+from .utils import get_shopping_cart
 
 
 class FavoriteViewSet(viewsets.GenericViewSet):
     """Add and delete favorite recipe."""
+    serializer_class = FavoriteRecipeSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def create(self, request, *args, **kwargs):
@@ -25,21 +27,28 @@ class FavoriteViewSet(viewsets.GenericViewSet):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         user = request.user
-        if Favorite.objects.filter(user=user, recipe=recipe).exists():
-            raise serializers.ValidationError(
-                'Вы уже добавили в избранное этот рецепт.')
-        Favorite.objects.create(user=user, recipe=recipe)
-        serializer = FavoriteRecipeSerializer(instance=recipe)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer = self.get_serializer(
+            data={'user': user, 'recipes': recipe},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=user, recipes=recipe)
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            serializer.data['recipes'],
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
     @action(methods=['delete'], detail=False)
     def delete(self, request, *args, **kwargs):
         recipe = get_object_or_404(Recipe, id=kwargs.get('recipe_id'))
         user = request.user
-        if Favorite.objects.filter(user=user, recipe=recipe).exists():
-            Favorite.objects.filter(user=user, recipe=recipe).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(
+            data={'user': user, 'recipes': recipe},
+        )
+        serializer.is_valid(raise_exception=True)
+        user.user.filter(recipes=recipe).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ShoppingListViewSet(viewsets.GenericViewSet):
@@ -77,14 +86,13 @@ class SubscribeViewSet(viewsets.GenericViewSet):
     def create(self, request, *args, **kwargs):
         user = get_object_or_404(User, id=kwargs.get('user_id'))
         follower = request.user
-        if Subscription.objects.filter(
-                follower=follower, author=user).exists() or user == follower:
-            raise serializers.ValidationError(
-                'Вы уже подписаны или подписываетесь на себя.')
-        Subscription.objects.create(follower=follower, author=user)
-        serializer = SubscribeSerializer(
-            instance=user, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        follow_instance = follower.follower.filter(user=user)
+        if not follow_instance.exists():
+            Follow.objects.create(user=user, follower=follower)
+            return Response(status=status.HTTP_201_CREATED)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['delete'], detail=False)
     def delete(self, request, *args, **kwargs):
@@ -118,6 +126,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeSerializer
     permission_classes = (IsAuthorOrReadOnly,)
     pagination_class = RecipePagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -127,43 +137,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipeListSerializer
         return RecipeSerializer
 
-    def get_queryset(self):
-        author = self.request.query_params.get('author')
-        tags = self.request.query_params.getlist('tags')
-        is_favorited = self.request.query_params.get('is_favorited')
-        is_in_shopping_cart = self.request.query_params.get(
-            'is_in_shopping_cart')
-        queryset = Recipe.objects.prefetch_related('r_tags')
-
-        if author:
-            queryset = queryset.filter(author__id=author)
-        if tags:
-            queryset = queryset.filter(tags__slug__in=tags).distinct()
-        if is_favorited and self.request.user.is_authenticated:
-            queryset = queryset.filter(favorite__user=self.request.user)
-        if is_in_shopping_cart and self.request.user.is_authenticated:
-            queryset = queryset.filter(shoppinglist__user=self.request.user)
-        return queryset
-
     @action(detail=False,
             methods=['GET'],
             permission_classes=[permissions.IsAuthenticated])
     def download_shopping_cart(self, request):
-        recipes = Recipe.objects.filter(shoppinglist__user=request.user)
-        ingredients = RecipeIngredient.objects.filter(
-            recipe__in=recipes).all()
-
-        shopping_cart = {}
-        m_units = {}
-        for ingredient in ingredients:
-            name = ingredient.ingredient.name
-            amount = ingredient.amount
-            if name in shopping_cart:
-                shopping_cart[name] += amount
-            else:
-                shopping_cart[name] = amount
-                m_units[name] = ingredient.ingredient.measurement_unit
-
+        shopping_cart, m_units = get_shopping_cart(request.user)
         text = f'Ваш список покупок, {request.user.first_name}!\n'
         for key, value in shopping_cart.items():
             text += f'{key}: {value} {m_units[key]}\n'
