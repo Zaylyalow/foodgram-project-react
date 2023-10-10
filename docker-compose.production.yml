@@ -29,7 +29,7 @@ services:
   nginx:
     image: zaylyalow/foodgram_gateway
     ports:
-      - "8000:80"
+      - "80:80"
     volumes:
       - static:/static/
       - media:/media/
