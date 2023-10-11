@@ -1,46 +1,20 @@
+from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
-from foodgram_backend import constants
+
+from recipes.models import (Recipe, RecipeTag, RecipeIngredient,
+                            Tag, Favorite, User, ShoppingList)
 from ingredients.models import Ingredient
-from recipes.models import (Favorite, Recipe, RecipeIngredient, RecipeTag,
-                            ShoppingList, Tag, User)
-from rest_framework import serializers
-from users.serializers import CustomUserSerializer
-
-
-class ShortRecipeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Recipe
-        fields = ('id', 'image', 'name', 'cooking_time')
+from users.serializers import UserSerializer
+from foodgram_backend import constants
 
 
 class FavoriteRecipeSerializer(serializers.ModelSerializer):
     """Recipe serializer for adding to favorite."""
-    recipes = ShortRecipeSerializer(required=False, read_only=True)
-
-    def validate(self, data: dict) -> dict:
-        request = self.context['request']
-        recipe = get_object_or_404(
-            Recipe,
-            id=self.context['view'].kwargs['recipe_id'],
-        )
-        owner = request.user
-        if request.method == 'POST':
-            if owner.owner.filter(recipes=recipe).exists():
-                raise serializers.ValidationError(
-                    'Рецепт уже в избранном!'
-                )
-        if request.method == 'DELETE':
-            if not owner.owner.filter(recipes=recipe).exists():
-                raise serializers.ValidationError(
-                    'Рецепта нет в избранном!'
-                )
-        return data
-
     class Meta:
-        model = Favorite
-        fields = ('recipes', 'user')
-        read_only_fields = ('user',)
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+        read_only_fields = ('id', 'name', 'image', 'cooking_time')
 
 
 class RecipeIngredientListSerializer(serializers.ModelSerializer):
@@ -88,7 +62,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     """Serializer for Recipes model."""
     image = Base64ImageField(required=False)
     ingredients = RecipeIngredientSerializer(required=True, many=True)
-    author = CustomUserSerializer(read_only=True)
+    author = UserSerializer(read_only=True)
     tags = serializers.ListField(required=True)
     cooking_time = serializers.IntegerField(
         min_value=constants.MIN_INT_VALIDATOR,
@@ -110,18 +84,16 @@ class RecipeSerializer(serializers.ModelSerializer):
             instance, context={'request': self.context.get('request')}).data
 
     def validate(self, data):
-        max_letters = 2
         name = data.get('name')
-        letter_count = sum(symbol.isalpha() for symbol in name)
-        if letter_count < max_letters:
+        l_count = sum(symbol.isalpha() for symbol in name)
+        if l_count < 2:
             raise serializers.ValidationError(
                 'Название должно содержать минимум две буквы.')
 
         ingredients = data.get('ingredients')
         tags = data.get('tags')
         if not (ingredients and tags):
-            raise serializers.ValidationError(
-                'Поле ingredients или tags пустое')
+            raise serializers.ValidationError()
 
         checklist = []
         for ingredient in ingredients:
@@ -129,13 +101,12 @@ class RecipeSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError()
             checklist.append(ingredient.get('id'))
 
+        checklist = []
         for tag in tags:
-            if len(tag) != len(set(tag)):
-                raise serializers.ValidationError(
-                    'Теги должны быть уникальными!')
+            if tag in checklist:
+                raise serializers.ValidationError()
             if not Tag.objects.filter(id=tag).exists():
-                raise serializers.ValidationError(
-                    'Без тэгов нельзя!')
+                raise serializers.ValidationError()
             checklist.append(tag)
 
         return data
@@ -198,14 +169,15 @@ class RecipeSerializer(serializers.ModelSerializer):
             )
         RecipeIngredient.objects.bulk_create(recipe_ingredients)
 
-        return super().update(instance, validated_data)
+        instance.save()
+        return instance
 
 
 class RecipeListSerializer(serializers.ModelSerializer):
     """Serializer for list Recipes model."""
     ingredients = RecipeIngredientListSerializer(
         required=True, many=True, source='r_ingredients')
-    author = CustomUserSerializer(read_only=True)
+    author = UserSerializer(read_only=True)
     tags = RecipeTagListSerializer(required=True, many=True, source='r_tags')
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
@@ -238,12 +210,8 @@ class RecipeListSerializer(serializers.ModelSerializer):
         ).exists()
 
 
-class SubscribeSerializer(CustomUserSerializer):
+class SubscribeSerializer(UserSerializer):
     """Subscribe serializer."""
-    author = CustomUserSerializer(read_only=True)
-    follower = serializers.HiddenField(
-        default=serializers.CurrentUserDefault(),
-    )
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
@@ -260,20 +228,10 @@ class SubscribeSerializer(CustomUserSerializer):
             'recipes_count'
         )
 
-    def validate(self, data: dict) -> dict:
-        if (
-            get_object_or_404(User, id=self.context['view'].kwargs['user_id'])
-            == data['follower']
-        ):
-            raise serializers.ValidationError(
-                'Нельзя подписаться на самого себя!',
-            )
-        return data
-
     def get_recipes(self, obj):
-        recipes_limit = int(self.context[
+        recipes_limit = self.context[
             'request'
-        ].query_params.get('recipes_limit', 'f'))
+        ].query_params.get('recipes_limit', 'f')
 
         if not recipes_limit.isdigit():
             recipes_limit = None

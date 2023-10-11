@@ -1,10 +1,9 @@
-from djoser.serializers import UserSerializer
 from rest_framework import serializers
 
 from .models import Subscription, User
 
 
-class CustomUserSerializer(UserSerializer):
+class UserSerializer(serializers.ModelSerializer):
     """Serializer fot User model."""
     is_subscribed = serializers.SerializerMethodField()
 
